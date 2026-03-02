@@ -4,6 +4,8 @@
 podman pod kill allpodd
 podman pod rm   allpodd
 
+pkill -f "kubectl port-forward" || true
+pkill -f "port-forward" || true
 
 ########################################################
 # Bygger konteinerbilder i Podmans konteinerbildearkiv #
@@ -39,13 +41,6 @@ podman save  web:latest          | microk8s ctr image import -
 # Oppretter Podman-podd
 podman  pod create --name allpodd -p 8080:80 -p 8081:81
 
-# Starter konteinere, basert på konternerbildene, i den opprettede
-# podden.
-podman run -dit --pod=allpodd --restart=always --name app          localhost/app
-podman run -dit --pod=allpodd --restart=always --name bidrag-db    localhost/bidrag-db
-podman run -dit --pod=allpodd --restart=always --name pseudonym-db localhost/pseudonym-db
-podman run -dit --pod=allpodd --restart=always --name web          localhost/web
-
 if [ -d ./data ]; then
   echo "data directory already exists"
 else
@@ -67,8 +62,10 @@ else
   touch ./data/pseudonym.db
 fi
 
-podman run -dit --pod=allpodd --restart=always --name bidrag-db -v /data/bidrag.db:/var/www/bidrag.db localhost/bidrag-db
-podman run -dit --pod=allpodd --restart=always --name pseudonym-db -v /data/pseudonym.db:/var/www/pseudonym.db localhost/pseudonym-db
+podman run -dit --pod=allpodd --restart=always --name app          localhost/app
+podman run -dit --pod=allpodd --restart=always --name bidrag-db -v $(pwd)/data/bidrag.db:/var/www/bidrag.db localhost/bidrag-db
+podman run -dit --pod=allpodd --restart=always --name pseudonym-db -v $(pwd)/data/pseudonym.db:/var/www/pseudonym.db localhost/pseudonym-db
+podman run -dit --pod=allpodd --restart=always --name web          localhost/web
 
 # Sletter gammel kuberntes-fil -- om den finnes
 rm -f ./allpodd.yaml
@@ -79,6 +76,8 @@ podman generate kube allpodd --service -f ./allpodd.yaml
 # imagePullPolicy: Never
 # Ref: https://stackoverflow.com/questions/37302776/what-is-the-meaning-of-imagepullbackoff-status-on-a-kubernetes-pod
 sed -i "/image:/a \    imagePullPolicy: Never" allpodd.yaml
+sed -i '/bidrag\.db/s/name: [^ ]*/name: bidrag-db-vol/' allpodd.yaml
+sed -i '/pseudonym\.db/s/name: [^ ]*/name: pseudonym-db-vol/' allpodd.yaml
 
 # Rydder opp (ved å drepe og fjerne podden)
 podman pod kill allpodd
@@ -96,8 +95,10 @@ kubectl delete pod/allpodd     --grace-period=1
 # Starte podden i en Service i K8S
 kubectl create -f allpodd.yaml
 
-kubectl port-forward service/allpodd 8080:80 &
-kubectl port-forward service/allpodd 8081:81 &
+kubectl wait --for=condition=Ready pod/allpodd --timeout=60s
+
+microk8s kubectl port-forward service/allpodd 8080:80 &
+microk8s kubectl port-forward service/allpodd 8081:81 &
 
 ####################################################
 # Skriver ut info for tilgang på lokal vertsmaskin #
