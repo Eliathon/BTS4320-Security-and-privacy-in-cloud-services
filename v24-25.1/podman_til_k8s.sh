@@ -46,6 +46,22 @@ podman run -dit --pod=allpodd --restart=always --name bidrag-db    localhost/bid
 podman run -dit --pod=allpodd --restart=always --name pseudonym-db localhost/pseudonym-db
 podman run -dit --pod=allpodd --restart=always --name web          localhost/web
 
+if [ -f ./data/bidrag.db ]; then
+  echo "bidrag,db already exists"
+else
+  echo "Creating bidrag.db"
+  touch ./data/bidrag.db
+fi
+
+if [ -f ./data/pseudonym.db ]; then
+  echo "pseudonym.db already exists"
+else
+  echo "Creating pseudonym.db"
+  touch ./data/pseudonym.db
+fi
+
+podman run -dit --pod=allpodd --restart=always --name bidrag-db -v /data/bidrag.db:/var/www/bidrag.db localhost/bidrag-db
+podman run -dit --pod=allpodd --restart=always --name pseudonym-db -v /data/pseudonym.db:/var/www/pseudonym.db localhost/pseudonym-db
 
 # Sletter gammel kuberntes-fil -- om den finnes
 rm -f ./allpodd.yaml
