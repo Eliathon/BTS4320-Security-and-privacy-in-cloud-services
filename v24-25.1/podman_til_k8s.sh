@@ -46,6 +46,13 @@ podman run -dit --pod=allpodd --restart=always --name bidrag-db    localhost/bid
 podman run -dit --pod=allpodd --restart=always --name pseudonym-db localhost/pseudonym-db
 podman run -dit --pod=allpodd --restart=always --name web          localhost/web
 
+if [ -d ./data ]; then
+  echo "data directory already exists"
+else
+  echo "Creating data directory"
+  mkdir ./data
+fi
+
 if [ -f ./data/bidrag.db ]; then
   echo "bidrag,db already exists"
 else
