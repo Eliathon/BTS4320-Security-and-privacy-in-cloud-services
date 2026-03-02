@@ -96,6 +96,8 @@ kubectl delete pod/allpodd     --grace-period=1
 # Starte podden i en Service i K8S
 kubectl create -f allpodd.yaml
 
+kubectl port-forward service/allpodd 8080:80 &
+kubectl port-forward service/allpodd 8081:81 &
 
 ####################################################
 # Skriver ut info for tilgang på lokal vertsmaskin #
