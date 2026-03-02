@@ -41,25 +41,16 @@ podman save  web:latest          | microk8s ctr image import -
 # Oppretter Podman-podd
 podman  pod create --name allpodd -p 8080:80 -p 8081:81
 
-if [ -d ./data ]; then
-  echo "data directory already exists"
-else
-  echo "Creating data directory"
-  mkdir ./data
+mkdir -p ./data
+
+if [ ! -f ./data/bidrag.db ] || [ ! -s ./data/bidrag.db ]; then
+  echo "Copying from bidrag.db image"
+  podman run --rm localhost/bidrag-db cat /var/www/bidrag.db > ./data/bidrag.db
 fi
 
-if [ -f ./data/bidrag.db ]; then
-  echo "bidrag,db already exists"
-else
-  echo "Creating bidrag.db"
-  touch ./data/bidrag.db
-fi
-
-if [ -f ./data/pseudonym.db ]; then
-  echo "pseudonym.db already exists"
-else
-  echo "Creating pseudonym.db"
-  touch ./data/pseudonym.db
+if [ ! -f ./data/pseudonym.db ] || [ ! -s ./pseudonym.db ]; then
+  echo "Copying from pseudonym.db image"
+  podman run --rm localhost/pseudonym-db cat /var/www/pseudonym.db > ./data/pseudonym.db
 fi
 
 podman run -dit --pod=allpodd --restart=always --name app          localhost/app
