@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bidrag-db
+  namespace: bidragsrom
+  labels:
+    app: bidrag-db
+spec:
+  containers:
+    - name: bidrag-db
+      image: localhost/bidrag-db:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 82
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bidrag-db
+  namespace: bidragsrom
+spec:
+  selector:
+    app: bidrag-db
+  ports:
+    - protocol: TCP
+      port: 82
+      targetPort: 82

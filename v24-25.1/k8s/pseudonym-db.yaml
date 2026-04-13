@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pseudonym-db
+  namespace: pseudonymrom
+  labels:
+    app: pseudonym-db
+spec:
+  containers:
+    - name: pseudonym-db
+      image: localhost/pseudonym-db:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 83
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pseudonym-db
+  namespace: pseudonymrom
+spec:
+  selector:
+    app: pseudonym-db
+  ports:
+    - protocol: TCP
+      port: 83
+      targetPort: 83
