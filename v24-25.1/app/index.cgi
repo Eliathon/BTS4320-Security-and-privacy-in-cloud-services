@@ -36,6 +36,9 @@ for I in $(echo $KROPP|tr '&' ' '); do
 
 done
 
+# Leser krypteringsnøkkel fra miljøvariabel satt via Kubernetes Secret
+MASTER_KEY="${MASTER_KEY:-}"
+
 ## 1. HENTER PSEUDONYM ##
 
 # Dataene skal sendes i XML-format til pseudonym-databasen
@@ -45,9 +48,9 @@ XML="<pseudonym>             \
      </pseudonym>"
 
 # URL til pseudonym-databasen
-URL='allpodd:83' 
+URL='http://pseudonym-db.pseudonymrom.svc.cluster.local:83/cgi-bin/index.cgi'
 
-# Til loggen (kubctl logs pods/app-[...])
+# Til loggen
 cat <<EOF >&2
 KROPP: $KROPP
 PN-URL:   $URL
@@ -55,13 +58,17 @@ PN-XML:
 $XML
 EOF
 
-
 # Henter pseudonym
 N=$(curl -s -d "$XML" $URL)
 
+## 2. KONTAKTER BIDRAG-DB ##
 
-## 1. KONTAKTER BIDRAG-DB ##
-
+# Krypter kommentar ved Ny og Endre
+if [ "$H" = "Ny" ] || [ "$H" = "Endre" ]; then
+    if [ -n "$K" ] && [ -n "$MASTER_KEY" ]; then
+        K=$(printf "%s" "$K" | openssl enc -aes-256-cbc -a -salt -pass env:MASTER_KEY 2>/dev/null)
+    fi
+fi
 # Dataene skal sendes i XML-format til bidrag-databasen
 XML="<bidrag>\
 <navn>$N</navn>\
@@ -73,19 +80,19 @@ XML="<bidrag>\
 </bidrag>"
 
 # URL til bidrag-databasen
-URL='allpodd:82' 
+URL='http://bidrag-db.bidragsrom.svc.cluster.local:82/cgi-bin/index.cgi'
 
- 
+
+ # Til loggen
+ cat <<EOF >&2
+ BIDRAG-URL:   $URL
+ BIDRAG-XML:
+ $XML
+ EOF
+
 # Sender forespørsel til databasen, avhengig av forespurt handling
-if [ "$H" = "Slett" ]; then curl -s -X DELETE -d "$XML" $URL; fi     
-if [ "$H" = "Endre" ]; then curl -s -X PUT    -d "$XML" $URL; fi
-if [ "$H" = "Ny"    ]; then curl -s -X POST   -d "$XML" $URL; fi
-if [ "$H" = "Liste" ]; then curl -s -X GET              $URL; fi
+if [ "$H" = "Slett" ]; then curl -s -X DELETE -d "$XML" "$URL"; fi
+if [ "$H" = "Endre" ]; then curl -s -X PUT    -d "$XML" "$URL"; fi
+if [ "$H" = "Ny"    ]; then curl -s -X POST   -d "$XML" "$URL"; fi
+if [ "$H" = "Liste" ]; then curl -s -X GET              "$URL"; fi
 
-
-# Til loggen (kubctl logs pods/app-[...])
-cat <<EOF >&2
-BIDRAG-URL:   $URL
-BIDRAG-XML:
-$XML
-EOF

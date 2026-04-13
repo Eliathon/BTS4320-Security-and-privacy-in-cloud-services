@@ -12,6 +12,12 @@ spec:
       imagePullPolicy: Never
       ports:
         - containerPort: 81
+      env:
+        - name: MASTER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-kryptering
+              key: MASTER_KEY
 ---
 apiVersion: v1
 kind: Service

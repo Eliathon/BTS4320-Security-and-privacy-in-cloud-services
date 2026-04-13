@@ -1,12 +1,13 @@
 #!/bin/sh
 set -eu
 
-# Rydder opp (ved å drepe og fjerne podden -- om den finnes)
-podman pod kill allpodd || true
-podman pod rm   allpodd || true
-
+# Rydder opp gamle port-forward-prosesser
 pkill -f "kubectl port-forward" || true
 pkill -f "port-forward" || true
+
+# Rydder bort gammel allpodd-modell hvis den finnes
+microk8s kubectl delete service allpodd --ignore-not-found=true
+microk8s kubectl delete pod allpodd --ignore-not-found=true
 
 ########################################################
 # Bygger konteinerbilder i Podmans konteinerbildearkiv #
@@ -32,75 +33,48 @@ podman save web:latest          | microk8s ctr image import -
 
 microk8s enable rbac || true
 
-kubectl apply -f identitet_og_tilgang/navnerom.yaml
-kubectl apply -f identitet_og_tilgang/roller.yaml
-kubectl apply -f identitet_og_tilgang/rolebindinger.yaml
+microk8s kubectl apply -f identitet_og_tilgang/navnerom.yaml
+microk8s kubectl apply -f identitet_og_tilgang/roller.yaml
+microk8s kubectl apply -f identitet_og_tilgang/rolebindinger.yaml
 
-echo "RBAC-ressurser opprettet:"
-kubectl get namespaces | grep -E "pseudonymrom|bidragsrom" || true
-kubectl get roles -n pseudonymrom || true
-kubectl get roles -n bidragsrom || true
-kubectl get rolebindings -n pseudonymrom || true
-kubectl get rolebindings -n bidragsrom || true
+##################################################################
+# Deployer workloads separat                                     #
+##################################################################
 
-##########################################################
-# Lager og redigerer filen allpodd.yaml som brukes til å #
-# iverksette systemet i Kubernetes (microk8s)            #
-##########################################################
+microk8s kubectl apply -f k8s/pseudonym-db.yaml
+microk8s kubectl apply -f k8s/bidrag-db.yaml
+microk8s kubectl apply -f k8s/app.yaml
+microk8s kubectl apply -f k8s/web.yaml
 
-podman pod create --name allpodd -p 8080:80 -p 8081:81
+##################################################################
+# Venter på at pods skal bli klare                               #
+##################################################################
 
-mkdir -p ./data
+microk8s kubectl wait --for=condition=Ready pod/pseudonym-db -n pseudonymrom --timeout=60s
+microk8s kubectl wait --for=condition=Ready pod/bidrag-db -n bidragsrom --timeout=60s
+microk8s kubectl wait --for=condition=Ready pod/app --timeout=60s
+microk8s kubectl wait --for=condition=Ready pod/web --timeout=60s
 
-if [ ! -f ./data/bidrag.db ] || [ ! -s ./data/bidrag.db ]; then
-  echo "Copying from bidrag.db image"
-  podman run --rm localhost/bidrag-db cat /var/www/bidrag.db > ./data/bidrag.db
-fi
+##################################################################
+# Port-forward for lokal testing                                 #
+##################################################################
 
-if [ ! -f ./data/pseudonym.db ] || [ ! -s ./data/pseudonym.db ]; then
-  echo "Copying from pseudonym.db image"
-  podman run --rm localhost/pseudonym-db cat /var/www/pseudonym.db > ./data/pseudonym.db
-fi
+microk8s kubectl port-forward service/web 8080:80 &
+microk8s kubectl port-forward service/app 8081:81 &
 
-podman run -dit --pod=allpodd --restart=always --name app \
-  localhost/app
-
-podman run -dit --pod=allpodd --restart=always --name bidrag-db \
-  -v "$(pwd)/data/bidrag.db:/var/www/bidrag.db" \
-  localhost/bidrag-db
-
-podman run -dit --pod=allpodd --restart=always --name pseudonym-db \
-  -v "$(pwd)/data/pseudonym.db:/var/www/pseudonym.db" \
-  localhost/pseudonym-db
-
-podman run -dit --pod=allpodd --restart=always --name web \
-  localhost/web
-
-rm -f ./allpodd.yaml
-podman generate kube allpodd --service -f ./allpodd.yaml
-
-sed -i "/image:/a \\    imagePullPolicy: Never" allpodd.yaml
-sed -i '/bidrag\.db/s/name: [^ ]*/name: bidrag-db-vol/' allpodd.yaml
-sed -i '/pseudonym\.db/s/name: [^ ]*/name: pseudonym-db-vol/' allpodd.yaml
-
-podman pod kill allpodd || true
-podman pod rm   allpodd || true
-
-########################
-# Starter opp systemet #
-########################
-
-kubectl delete service/allpodd --grace-period=1 --ignore-not-found=true
-kubectl delete pod/allpodd     --grace-period=1 --ignore-not-found=true
-
-kubectl create -f allpodd.yaml
-kubectl wait --for=condition=Ready pod/allpodd --timeout=60s
-
-microk8s kubectl port-forward service/allpodd 8080:80 &
-microk8s kubectl port-forward service/allpodd 8081:81 &
+##################################################################
+# Skriver ut info                                                #
+##################################################################
 
 echo
-echo "Gjør web (80) og app (81) tilgjengelig på localhost:"
-echo "microk8s kubectl port-forward service/allpodd 8080:80 &"
-echo "microk8s kubectl port-forward service/allpodd 8081:81 &"
-echo "For å se i nettleser, gå til http://localhost:8080"
+echo "Systemet er startet med separate Kubernetes-ressurser."
+echo "Web: http://localhost:8080/index.html"
+echo "App: http://localhost:8081"
+echo
+echo "RBAC-namespaces:"
+microk8s kubectl get namespaces | grep -E "pseudonymrom|bidragsrom" || true
+echo
+echo "Pods:"
+microk8s kubectl get pods
+microk8s kubectl get pods -n pseudonymrom
+microk8s kubectl get pods -n bidragsrom
