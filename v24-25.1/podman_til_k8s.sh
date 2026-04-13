@@ -13,10 +13,10 @@ microk8s kubectl delete pod allpodd --ignore-not-found=true
 # Bygger konteinerbilder i Podmans konteinerbildearkiv #
 ########################################################
 
-podman build pseudonym-db -t pseudonym-db
-podman build bidrag-db    -t bidrag-db
-podman build app          -t app
-podman build web          -t web
+podman build --no-cache pseudonym-db -t pseudonym-db
+podman build --no-cache bidrag-db    -t bidrag-db
+podman build --no-cache app          -t app
+podman build --no-cache web          -t web
 
 ##################################################################
 # Overfører bilder fra Podman til Kubernetes                     #
@@ -40,6 +40,14 @@ microk8s kubectl apply -f identitet_og_tilgang/rolebindinger.yaml
 ##################################################################
 # Deployer workloads separat                                     #
 ##################################################################
+
+microk8s kubectl apply -f k8s/app-secret.yaml
+
+# Slett eksisterende pods så de henter nye images
+microk8s kubectl delete pod/pseudonym-db -n pseudonymrom --ignore-not-found=true
+microk8s kubectl delete pod/bidrag-db    -n bidragsrom   --ignore-not-found=true
+microk8s kubectl delete pod/app                          --ignore-not-found=true
+microk8s kubectl delete pod/web                          --ignore-not-found=true
 
 microk8s kubectl apply -f k8s/pseudonym-db.yaml
 microk8s kubectl apply -f k8s/bidrag-db.yaml
