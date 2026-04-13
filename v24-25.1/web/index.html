@@ -1,40 +1,39 @@
 <!doctype html>
-<html>
+<html lang="no">
 <head>
     <meta charset="utf-8">
     <title>BIDRAG</title>
 </head>
 <body>
-<form id="bidragForm" action='http://localhost:8081' method='post'>
+<form id="bidragForm" action="http://localhost:8081" method="post">
     <table>
         <tr>
-            <td> E-post</td>
-            <td><input name='epost' type='text' id='epost'></td>
+            <td><label for="epost">E-post</label></td>
+            <td><input name="epost" type="text" id="epost"></td>
         </tr>
         <tr>
-            <td> Passord</td>
-            <td><input name='passord' type='text' id='passord'></td>
+            <td><label for="passord">Passord</label></td>
+            <td><input name="passord" type="text" id="passord"></td>
         </tr>
         <tr>
-            <td> Tittel</td>
-            <td><input name='tittel' type='text' id='tittel'></td>
+            <td><label for="tittel">Tittel</label></td>
+            <td><input name="tittel" type="text" id="tittel"></td>
         </tr>
         <tr>
-            <td> Kommentar</td>
-            <td><textarea name='kommentar' id='kommentar'> </textarea></td>
+            <td><label for="kommentar">Kommentar</label></td>
+            <td><textarea name="kommentar" id="kommentar"></textarea></td>
         </tr>
         <tr>
-            <td> Tekst</td>
-            <td><textarea name='tekst' id='tekst'> </textarea></td>
+            <td><label for="tekst">Tekst</label></td>
+            <td><textarea name="tekst" id="tekst"></textarea></td>
         </tr>
     </table>
-    <br/>
-    <input type='submit' name='handling' value='Endre'>
-    <input type='submit' name='handling' value='Slett'>
-    <input type='submit' name='handling' value='Ny'>
-    <input type='submit' name='handling' value='Liste'>
+    <br>
+    <input type="submit" name="handling" value="Endre">
+    <input type="submit" name="handling" value="Slett">
+    <input type="submit" name="handling" value="Ny">
+    <input type="submit" name="handling" value="Liste">
 </form>
-<br/>
-
+<br>
 </body>
 </html>

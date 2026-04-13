@@ -41,6 +41,7 @@ microk8s kubectl apply -f identitet_og_tilgang/rolebindinger.yaml
 # Deployer workloads separat                                     #
 ##################################################################
 
+microk8s kubectl apply -f k8s/app-secret.yaml
 microk8s kubectl apply -f k8s/pseudonym-db.yaml
 microk8s kubectl apply -f k8s/bidrag-db.yaml
 microk8s kubectl apply -f k8s/app.yaml
