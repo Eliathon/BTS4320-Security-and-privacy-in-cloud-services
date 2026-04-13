@@ -45,17 +45,17 @@ mkdir -p ./data
 
 if [ ! -f ./data/bidrag.db ] || [ ! -s ./data/bidrag.db ]; then
   echo "Copying from bidrag.db image"
-  podman run --rm localhost/bidrag-db cat /var/www/bidrag.db > ./data/bidrag.db
+  podman run --rm localhost/bidrag-db cat /var/www/data/bidrag.db > ./data/bidrag.db
 fi
 
-if [ ! -f ./data/pseudonym.db ] || [ ! -s ./pseudonym.db ]; then
+if [ ! -f ./data/pseudonym.db ] || [ ! -s ./data/pseudonym.db ]; then
   echo "Copying from pseudonym.db image"
-  podman run --rm localhost/pseudonym-db cat /var/www/pseudonym.db > ./data/pseudonym.db
+  podman run --rm localhost/pseudonym-db cat /var/www/data/pseudonym.db > ./data/pseudonym.db
 fi
 
 podman run -dit --pod=allpodd --restart=always --name app          localhost/app
-podman run -dit --pod=allpodd --restart=always --name bidrag-db -v $(pwd)/data/bidrag.db:/var/www/bidrag.db localhost/bidrag-db
-podman run -dit --pod=allpodd --restart=always --name pseudonym-db -v $(pwd)/data/pseudonym.db:/var/www/pseudonym.db localhost/pseudonym-db
+podman run -dit --pod=allpodd --restart=always --name bidrag-db -v $(pwd)/data/bidrag.db:/var/www/data/bidrag.db localhost/bidrag-db
+podman run -dit --pod=allpodd --restart=always --name pseudonym-db -v $(pwd)/data/pseudonym.db:/var/www/data/pseudonym.db localhost/pseudonym-db
 podman run -dit --pod=allpodd --restart=always --name web          localhost/web
 
 # Sletter gammel kuberntes-fil -- om den finnes

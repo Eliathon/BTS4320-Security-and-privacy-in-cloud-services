@@ -1,0 +1,436 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bidrag-system
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: bidrag-system
+type: Opaque
+stringData:
+  ADMIN_LIST_KEY: "change-me-before-prod"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bidrag-db-pvc
+  namespace: bidrag-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pseudonym-db-pvc
+  namespace: bidrag-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pseudonym-db
+  namespace: bidrag-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pseudonym-db
+  template:
+    metadata:
+      labels:
+        app: pseudonym-db
+    spec:
+      containers:
+        - name: pseudonym-db
+          image: localhost/pseudonym-db:latest
+          imagePullPolicy: Never
+          env:
+            - name: ADMIN_LIST_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: ADMIN_LIST_KEY
+          ports:
+            - containerPort: 83
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - name: pseudonym-data
+              mountPath: /var/www/data
+      volumes:
+        - name: pseudonym-data
+          persistentVolumeClaim:
+            claimName: pseudonym-db-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bidrag-db
+  namespace: bidrag-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bidrag-db
+  template:
+    metadata:
+      labels:
+        app: bidrag-db
+    spec:
+      containers:
+        - name: bidrag-db
+          image: localhost/bidrag-db:latest
+          imagePullPolicy: Never
+          env:
+            - name: ADMIN_LIST_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: ADMIN_LIST_KEY
+          ports:
+            - containerPort: 82
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - name: bidrag-data
+              mountPath: /var/www/data
+      volumes:
+        - name: bidrag-data
+          persistentVolumeClaim:
+            claimName: bidrag-db-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: bidrag-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app
+  template:
+    metadata:
+      labels:
+        app: app
+    spec:
+      containers:
+        - name: app
+          image: localhost/app:latest
+          imagePullPolicy: Never
+          env:
+            - name: ADMIN_LIST_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: ADMIN_LIST_KEY
+          ports:
+            - containerPort: 81
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: bidrag-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: localhost/web:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pseudonym-db
+  namespace: bidrag-system
+spec:
+  selector:
+    app: pseudonym-db
+  ports:
+    - port: 83
+      targetPort: 83
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bidrag-db
+  namespace: bidrag-system
+spec:
+  selector:
+    app: bidrag-db
+  ports:
+    - port: 82
+      targetPort: 82
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  namespace: bidrag-system
+spec:
+  selector:
+    app: app
+  ports:
+    - port: 81
+      targetPort: 81
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: bidrag-system
+spec:
+  selector:
+    app: web
+  ports:
+    - port: 80
+      targetPort: 80
+  type: NodePort
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: bidrag-system
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-web-to-app
+  namespace: bidrag-system
+spec:
+  podSelector:
+    matchLabels:
+      app: app
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: web
+      ports:
+        - protocol: TCP
+          port: 81
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: bidrag-db
+      ports:
+        - protocol: TCP
+          port: 82
+    - to:
+        - podSelector:
+            matchLabels:
+              app: pseudonym-db
+      ports:
+        - protocol: TCP
+          port: 83
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-app-to-datastores
+  namespace: bidrag-system
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: ["bidrag-db", "pseudonym-db"]
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: app
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bts4320
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: bts4320
+type: Opaque
+stringData:
+  ADMIN_TOKEN: "change-me-in-production"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: allpodd
+  namespace: bts4320
+spec:
+  selector:
+    app: allpodd
+  ports:
+    - name: web
+      port: 80
+      targetPort: 80
+    - name: app
+      port: 81
+      targetPort: 81
+    - name: bidrag-db
+      port: 82
+      targetPort: 82
+    - name: pseudonym-db
+      port: 83
+      targetPort: 83
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allpodd
+  namespace: bts4320
+  labels:
+    app: allpodd
+spec:
+  automountServiceAccountToken: false
+  containers:
+    - name: web
+      image: web:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 80
+      securityContext:
+        allowPrivilegeEscalation: false
+        runAsNonRoot: true
+        runAsUser: 1000
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]
+    - name: app
+      image: app:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 81
+      env:
+        - name: ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: ADMIN_TOKEN
+      securityContext:
+        allowPrivilegeEscalation: false
+        runAsNonRoot: true
+        runAsUser: 1000
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]
+    - name: bidrag-db
+      image: bidrag-db:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 82
+      env:
+        - name: ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: ADMIN_TOKEN
+      volumeMounts:
+        - name: bidrag-db-vol
+          mountPath: /var/www/bidrag.db
+      securityContext:
+        allowPrivilegeEscalation: false
+        runAsNonRoot: true
+        runAsUser: 1000
+        readOnlyRootFilesystem: false
+        capabilities:
+          drop: ["ALL"]
+    - name: pseudonym-db
+      image: pseudonym-db:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 83
+      volumeMounts:
+        - name: pseudonym-db-vol
+          mountPath: /var/www/pseudonym.db
+      securityContext:
+        allowPrivilegeEscalation: false
+        runAsNonRoot: true
+        runAsUser: 1000
+        readOnlyRootFilesystem: false
+        capabilities:
+          drop: ["ALL"]
+  volumes:
+    - name: bidrag-db-vol
+      hostPath:
+        path: /var/lib/bts4320/bidrag.db
+        type: FileOrCreate
+    - name: pseudonym-db-vol
+      hostPath:
+        path: /var/lib/bts4320/pseudonym.db
+        type: FileOrCreate
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-external-db-access
+  namespace: bts4320
+spec:
+  podSelector:
+    matchLabels:
+      app: allpodd
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: allpodd
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: allpodd

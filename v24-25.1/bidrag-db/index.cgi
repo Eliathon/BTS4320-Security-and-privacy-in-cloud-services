@@ -1,6 +1,10 @@
 #!/bin/sh
 
-DB=../bidrag.db
+DB=../data/bidrag.db
+
+sql_escape() {
+    echo "$1" | sed "s/'/''/g"
+}
 
 # Skriver slutten av HTTP-hodet og en tom linje
 cat <<EOF
@@ -17,7 +21,33 @@ EOF
 CONTENT_LENGTH=$HTTP_CONTENT_LENGTH$CONTENT_LENGTH
 
 if [ "$REQUEST_METHOD" = "GET" ]; then
-    sqlite3 -line $DB "SELECT tittel, tekst FROM  Bidrag"
+    for I in $(echo "$QUERY_STRING" | tr '&' ' '); do
+        N=$(echo "$I" | cut -f1 -d=)
+        V=$(echo "$I" | cut -f2- -d= | sed 's/+/ /g;s/%/\\x/g')
+        V=$(printf '%b' "$V")
+        if [ "$N" = "visning"       ]; then VISNING="$V"; fi
+        if [ "$N" = "viser"         ]; then VISER="$V"; fi
+        if [ "$N" = "admin_nokkel"  ]; then ADMIN_NOKKEL="$V"; fi
+    done
+
+    VISER_ESC=$(sql_escape "$VISER")
+
+    if [ "$VISNING" = "admin" ] && [ "$ADMIN_LIST_KEY" != "" ] && [ "$ADMIN_NOKKEL" = "$ADMIN_LIST_KEY" ]; then
+        sqlite3 -line $DB "SELECT pseudonym AS visning, tittel, tekst FROM Bidrag"
+        exit
+    fi
+
+    if [ "$VISNING" = "bruker" ] && [ "$VISER_ESC" != "" ]; then
+        sqlite3 -line $DB "SELECT CASE WHEN pseudonym='$VISER_ESC' THEN pseudonym ELSE 'anonymous' END AS visning, tittel, tekst FROM Bidrag"
+        exit
+    fi
+
+    if [ "$VISNING" = "min" ] && [ "$VISER_ESC" != "" ]; then
+        sqlite3 -line $DB "SELECT pseudonym AS visning, tittel, tekst, kommentar FROM Bidrag WHERE pseudonym='$VISER_ESC'"
+        exit
+    fi
+
+    sqlite3 -line $DB "SELECT 'anonymous' AS visning, tittel, tekst FROM Bidrag"
     exit
 
 elif [ "$REQUEST_METHOD" = "OPTIONS" ]; then
@@ -51,21 +81,31 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 	H=$( mkpasswd -m sha-256 -S $S $P | cut -f4 -d$ )
 
 	# Setter inn ny post i databasen
-        sqlite3 $DB "INSERT INTO Bidrag VALUES ('$N','$S','$H','$K','$O','$T','$X')"
+        N_ESC=$(sql_escape "$N")
+        K_ESC=$(sql_escape "$K")
+        O_ESC=$(sql_escape "$O")
+        T_ESC=$(sql_escape "$T")
+        X_ESC=$(sql_escape "$X")
+        sqlite3 $DB "INSERT INTO Bidrag VALUES ('$N_ESC','$S','$H','$K_ESC','$O_ESC','$T_ESC','$X_ESC')"
 
     fi
     exit
 fi
 
 # Henter lagret saltverdi
-S=$( sqlite3 $DB "SELECT salt FROM Bidrag WHERE pseudonym='$N'" )
+N_ESC=$(sql_escape "$N")
+K_ESC=$(sql_escape "$K")
+O_ESC=$(sql_escape "$O")
+T_ESC=$(sql_escape "$T")
+X_ESC=$(sql_escape "$X")
+S=$( sqlite3 $DB "SELECT salt FROM Bidrag WHERE pseudonym='$N_ESC'" )
 if [ "$S" = "" ]; then echo Salt mangler ; exit; fi
 
 # Beregner hashverdi av innsendt passord
 H1=$( mkpasswd -m sha-256 -S $S $P | cut -f4 -d$ )
 
 # Sammenligner med lagret hashverdi
-H2=$( sqlite3 $DB "SELECT passordhash FROM Bidrag WHERE pseudonym='$N'" )
+H2=$( sqlite3 $DB "SELECT passordhash FROM Bidrag WHERE pseudonym='$N_ESC'" )
 
 # Avslutter om hashverdiene ikke er like 
 if [ "$H1" != "$H2" ]; then echo Feil passord! >&2 ; exit; fi
@@ -73,15 +113,15 @@ if [ "$H1" != "$H2" ]; then echo Feil passord! >&2 ; exit; fi
 
 if [ "$REQUEST_METHOD" = "DELETE" ]; then
     if [ "$N" != "" ]; then
-	sqlite3 $DB "DELETE FROM Bidrag WHERE pseudonym='$N'"
+	sqlite3 $DB "DELETE FROM Bidrag WHERE pseudonym='$N_ESC'"
     fi
 
 elif [ "$REQUEST_METHOD" = "PUT" ]; then
     sqlite3 $DB                \
        "UPDATE Bidrag SET      \
-    	kommentar='$K',        \
-    	offentlig_nokkel='$O', \
-	tittel='$T',           \
-        tekst='$X'             \
-        WHERE pseudonym='$N'"
+    	kommentar='$K_ESC',        \
+    	offentlig_nokkel='$O_ESC', \
+	tittel='$T_ESC',           \
+        tekst='$X_ESC'             \
+        WHERE pseudonym='$N_ESC'"
 fi

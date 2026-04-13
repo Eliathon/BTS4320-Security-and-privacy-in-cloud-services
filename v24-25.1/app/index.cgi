@@ -7,6 +7,10 @@ echo
 # Avslutter om HTTP-forespørsel ikke er en POST
 if [ "$REQUEST_METHOD" != "POST" ]; then exit; fi
 
+urldecode() {
+    printf '%b' "$(echo "$1" | sed 's/+/ /g;s/%/\\x/g')"
+}
+
 # Omgår bug i httpd
 CONTENT_LENGTH=$HTTP_CONTENT_LENGTH$CONTENT_LENGTH
 
@@ -24,7 +28,8 @@ echo app fikk dette i kroppen: $KROPP >&2
 for I in $(echo $KROPP|tr '&' ' '); do
 
     N=$(echo "$I"|cut -f1 -d=)
-    V=$(echo "$I"|cut -f2 -d=)
+    V=$(echo "$I"|cut -f2- -d=)
+    V=$(urldecode "$V")
 
     if [ "$N" = "epost"             ]; then  E="$V"; fi  
     if [ "$N" = "passord"           ]; then  P="$V"; fi  
@@ -33,8 +38,23 @@ for I in $(echo $KROPP|tr '&' ' '); do
     if [ "$N" = "tittel"            ]; then  T="$V"; fi
     if [ "$N" = "tekst"             ]; then  X="$V"; fi
     if [ "$N" = "handling"          ]; then  H="$V"; fi  
+    if [ "$N" = "admin_token"       ]; then  A="$V"; fi
 
 done
+
+if [ "$H" = "Liste" -a "$E" = "" -a "$P" = "" ]; then
+    curl -s -X GET bidrag-db:82
+    exit
+fi
+
+if [ "$H" = "AdminListe" ]; then
+    if [ "$ADMIN_LIST_KEY" = "" -o "$A" != "$ADMIN_LIST_KEY" ]; then
+        echo "Mangler gyldig administrator-nokkel"
+        exit
+    fi
+    curl -s -X GET "bidrag-db:82?visning=admin&admin_nokkel=$A"
+    exit
+fi
 
 ## 1. HENTER PSEUDONYM ##
 
@@ -45,7 +65,7 @@ XML="<pseudonym>             \
      </pseudonym>"
 
 # URL til pseudonym-databasen
-URL='allpodd:83' 
+URL='pseudonym-db:83' 
 
 # Til loggen (kubctl logs pods/app-[...])
 cat <<EOF >&2
@@ -73,14 +93,15 @@ XML="<bidrag>\
 </bidrag>"
 
 # URL til bidrag-databasen
-URL='allpodd:82' 
+URL='bidrag-db:82' 
 
  
 # Sender forespørsel til databasen, avhengig av forespurt handling
-if [ "$H" = "Slett" ]; then curl -s -X DELETE -d "$XML" $URL; fi     
-if [ "$H" = "Endre" ]; then curl -s -X PUT    -d "$XML" $URL; fi
-if [ "$H" = "Ny"    ]; then curl -s -X POST   -d "$XML" $URL; fi
-if [ "$H" = "Liste" ]; then curl -s -X GET              $URL; fi
+if [ "$H" = "Slett"   ]; then curl -s -X DELETE -d "$XML" $URL; fi
+if [ "$H" = "Endre"   ]; then curl -s -X PUT    -d "$XML" $URL; fi
+if [ "$H" = "Ny"      ]; then curl -s -X POST   -d "$XML" $URL; fi
+if [ "$H" = "Liste"   ]; then curl -s -X GET "$URL?visning=bruker&viser=$N"; fi
+if [ "$H" = "MinSide" ]; then curl -s -X GET "$URL?visning=min&viser=$N"; fi
 
 
 # Til loggen (kubctl logs pods/app-[...])
