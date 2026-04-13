@@ -11,8 +11,19 @@ urldecode() {
     printf '%b' "$(echo "$1" | sed 's/+/ /g;s/%/\\x/g')"
 }
 
+<<<<<<< Updated upstream
+=======
+xml_escape() {
+    echo "$1" | sed -e 's/&/\&amp;/g' \
+                   -e 's/</\&lt;/g' \
+                   -e 's/>/\&gt;/g' \
+                   -e "s/'/\&apos;/g" \
+                   -e 's/"/\&quot;/g'
+}
+
+>>>>>>> Stashed changes
 # Omgår bug i httpd
-CONTENT_LENGTH=$HTTP_CONTENT_LENGTH$CONTENT_LENGTH
+CONTENT_LENGTH=${HTTP_CONTENT_LENGTH:-${CONTENT_LENGTH:-0}}
 
 # Henter data fra HTTP-krpppen 
 KROPP=$(head -c "$CONTENT_LENGTH")
@@ -23,7 +34,6 @@ KROPP=$(echo $KROPP|sed "s/%40/@/")
 # Til loggen (kubctl logs pods/allpodd -c app -f)
 echo app fikk dette i kroppen: $KROPP >&2
 
-  
 # Fordeler inndataene i variabler
 for I in $(echo $KROPP|tr '&' ' '); do
 
@@ -42,6 +52,18 @@ for I in $(echo $KROPP|tr '&' ' '); do
 
 done
 
+<<<<<<< Updated upstream
+=======
+# Escape XML-sensitive tegn i brukerinput før videresending.
+E_XML=$(xml_escape "$E")
+P_XML=$(xml_escape "$P")
+K_XML=$(xml_escape "$K")
+O_XML=$(xml_escape "$O")
+T_XML=$(xml_escape "$T")
+X_XML=$(xml_escape "$X")
+H_XML=$(xml_escape "$H")
+
+>>>>>>> Stashed changes
 if [ "$H" = "Liste" -a "$E" = "" -a "$P" = "" ]; then
     curl -s -X GET bidrag-db:82
     exit
@@ -60,12 +82,18 @@ fi
 
 # Dataene skal sendes i XML-format til pseudonym-databasen
 XML="<pseudonym>             \
-        <epost>$E</epost>    \
-       <passord>$P</passord> \
+        <epost>$E_XML</epost>    \
+       <passord>$P_XML</passord> \
+      <handling>$H_XML</handling> \
      </pseudonym>"
 
+<<<<<<< Updated upstream
 # URL til pseudonym-databasen
 URL='pseudonym-db:83' 
+=======
+# URL til pseudonym-databasen (samme pod => localhost)
+URL='localhost:83/cgi-bin/index.cgi' 
+>>>>>>> Stashed changes
 
 # Til loggen (kubctl logs pods/app-[...])
 cat <<EOF >&2
@@ -77,7 +105,19 @@ EOF
 
 
 # Henter pseudonym
-N=$(curl -s -d "$XML" $URL)
+PN_RESP=$(curl -sS -d "$XML" "$URL" 2>&1)
+PN_STATUS=$?
+if [ "$PN_STATUS" -ne 0 ]; then
+    echo "Feil ved kontakt med pseudonym-db: $PN_RESP"
+    exit
+fi
+N=$(echo "$PN_RESP" | tr -d '\r\n')
+
+# Stopper tidlig med tydelig feil hvis pseudonymoppslag feiler.
+if [ "$N" = "" ]; then
+    echo "Fant ikke pseudonym. Sjekk e-post og passord. Svar fra pseudonym-db: $PN_RESP"
+    exit
+fi
 
 
 ## 1. KONTAKTER BIDRAG-DB ##
@@ -85,15 +125,20 @@ N=$(curl -s -d "$XML" $URL)
 # Dataene skal sendes i XML-format til bidrag-databasen
 XML="<bidrag>\
 <navn>$N</navn>\
-<passord>$P</passord>\
-<kommentar>$K</kommentar>\
-<offentlig_nokkel>$O</offentlig_nokkel>\
-<tittel>$T</tittel>\
-<tekst>$X</tekst>\
+<passord>$P_XML</passord>\
+<kommentar>$K_XML</kommentar>\
+<offentlig_nokkel>$O_XML</offentlig_nokkel>\
+<tittel>$T_XML</tittel>\
+<tekst>$X_XML</tekst>\
 </bidrag>"
 
+<<<<<<< Updated upstream
 # URL til bidrag-databasen
 URL='bidrag-db:82' 
+=======
+# URL til bidrag-databasen (samme pod => localhost)
+URL='localhost:82/cgi-bin/index.cgi' 
+>>>>>>> Stashed changes
 
  
 # Sender forespørsel til databasen, avhengig av forespurt handling

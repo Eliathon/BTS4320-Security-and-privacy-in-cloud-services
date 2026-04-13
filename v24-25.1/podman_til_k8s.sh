@@ -1,8 +1,14 @@
 #!/bin/sh 
+set -eu
+
+# Always run relative to this script so ./data points to repo data/.
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+cd "$SCRIPT_DIR" || exit 1
+KCTL="microk8s kubectl"
 
 # Rydder opp (ved å drepe og fjerne podden -- om den finnes)
-podman pod kill allpodd
-podman pod rm   allpodd
+podman pod kill allpodd || true
+podman pod rm   allpodd || true
 
 pkill -f "kubectl port-forward" || true
 pkill -f "port-forward" || true
@@ -71,8 +77,8 @@ sed -i '/bidrag\.db/s/name: [^ ]*/name: bidrag-db-vol/' allpodd.yaml
 sed -i '/pseudonym\.db/s/name: [^ ]*/name: pseudonym-db-vol/' allpodd.yaml
 
 # Rydder opp (ved å drepe og fjerne podden)
-podman pod kill allpodd
-podman pod rm   allpodd
+podman pod kill allpodd || true
+podman pod rm   allpodd || true
 
 
 ########################
@@ -80,16 +86,16 @@ podman pod rm   allpodd
 ########################
 
 # Stoppper kjørende service og pod -- om de finnes
-kubectl delete service/allpodd --grace-period=1
-kubectl delete pod/allpodd     --grace-period=1
+$KCTL delete service/allpodd --grace-period=1 --ignore-not-found
+$KCTL delete pod/allpodd     --grace-period=1 --ignore-not-found
 
 # Starte podden i en Service i K8S
-kubectl create -f allpodd.yaml
+$KCTL create -f allpodd.yaml
 
-kubectl wait --for=condition=Ready pod/allpodd --timeout=60s
+$KCTL wait --for=condition=Ready pod/allpodd --timeout=60s
 
-microk8s kubectl port-forward service/allpodd 8080:80 &
-microk8s kubectl port-forward service/allpodd 8081:81 &
+$KCTL port-forward service/allpodd 8080:80 &
+$KCTL port-forward service/allpodd 8081:81 &
 
 ####################################################
 # Skriver ut info for tilgang på lokal vertsmaskin #

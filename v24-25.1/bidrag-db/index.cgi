@@ -1,10 +1,13 @@
 #!/bin/sh
 
 DB=../data/bidrag.db
+<<<<<<< Updated upstream
 
 sql_escape() {
     echo "$1" | sed "s/'/''/g"
 }
+=======
+>>>>>>> Stashed changes
 
 # Skriver slutten av HTTP-hodet og en tom linje
 cat <<EOF
@@ -18,7 +21,7 @@ EOF
 
 
 # Omgår bug i httpd
-CONTENT_LENGTH=$HTTP_CONTENT_LENGTH$CONTENT_LENGTH
+CONTENT_LENGTH=${HTTP_CONTENT_LENGTH:-${CONTENT_LENGTH:-0}}
 
 if [ "$REQUEST_METHOD" = "GET" ]; then
     for I in $(echo "$QUERY_STRING" | tr '&' ' '); do
@@ -81,13 +84,23 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 	H=$( mkpasswd -m sha-256 -S $S $P | cut -f4 -d$ )
 
 	# Setter inn ny post i databasen
+<<<<<<< Updated upstream
         N_ESC=$(sql_escape "$N")
         K_ESC=$(sql_escape "$K")
         O_ESC=$(sql_escape "$O")
         T_ESC=$(sql_escape "$T")
         X_ESC=$(sql_escape "$X")
         sqlite3 $DB "INSERT INTO Bidrag VALUES ('$N_ESC','$S','$H','$K_ESC','$O_ESC','$T_ESC','$X_ESC')"
+=======
+        if sqlite3 $DB "INSERT OR REPLACE INTO Bidrag VALUES ('$N','$S','$H','$K','$O','$T','$X')"; then
+            echo "Bidrag lagret."
+        else
+            echo "Kunne ikke lagre bidrag."
+        fi
+>>>>>>> Stashed changes
 
+    else
+        echo "Mangler pseudonym eller passord."
     fi
     exit
 fi
@@ -113,15 +126,35 @@ if [ "$H1" != "$H2" ]; then echo Feil passord! >&2 ; exit; fi
 
 if [ "$REQUEST_METHOD" = "DELETE" ]; then
     if [ "$N" != "" ]; then
+<<<<<<< Updated upstream
 	sqlite3 $DB "DELETE FROM Bidrag WHERE pseudonym='$N_ESC'"
+=======
+	if sqlite3 $DB "DELETE FROM Bidrag WHERE pseudonym='$N'"; then
+            echo "Bidrag slettet."
+        else
+            echo "Kunne ikke slette bidrag."
+        fi
+>>>>>>> Stashed changes
     fi
 
 elif [ "$REQUEST_METHOD" = "PUT" ]; then
-    sqlite3 $DB                \
+    if sqlite3 $DB                \
        "UPDATE Bidrag SET      \
+<<<<<<< Updated upstream
     	kommentar='$K_ESC',        \
     	offentlig_nokkel='$O_ESC', \
 	tittel='$T_ESC',           \
         tekst='$X_ESC'             \
         WHERE pseudonym='$N_ESC'"
+=======
+    	kommentar='$K',        \
+    	offentlig_nokkel='$O', \
+	tittel='$T',           \
+        tekst='$X'             \
+        WHERE pseudonym='$N'"; then
+        echo "Bidrag oppdatert."
+    else
+        echo "Kunne ikke oppdatere bidrag."
+    fi
+>>>>>>> Stashed changes
 fi
