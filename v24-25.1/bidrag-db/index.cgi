@@ -26,7 +26,7 @@ elif [ "$REQUEST_METHOD" = "OPTIONS" ]; then
 else
     KR=$(head -c "$CONTENT_LENGTH")
 
-    # Til loggen (kubctl logs pods/allpodd -c bidrag-db -f)
+    # Til loggen (kubctl logs pods -c bidrag-db -f)
     echo bidrag-db fikk dette i kroppen: $KR >&2
 
     N=$( echo "$KR" | xmllint --xpath "/bidrag/navn/text()"             - 2>/dev/null)

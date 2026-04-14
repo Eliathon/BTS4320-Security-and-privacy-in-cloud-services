@@ -1,16 +1,18 @@
 #!/bin/sh 
 
-# Rydder opp (ved å drepe og fjerne podden -- om den finnes)
-podman pod kill allpodd
-podman pod rm   allpodd
+# Rydder opp (ved å drepe og fjerne poddene -- om de finnes)
+podman pod kill pseudonym-pod 2>/dev/null
+podman pod rm   pseudonym-pod 2>/dev/null
+podman pod kill bidrag-pod 2>/dev/null
+podman pod rm   bidrag-pod 2>/dev/null
 
 pkill -f "kubectl port-forward" || true
 pkill -f "port-forward" || true
 
 ########################################################
 # Bygger konteinerbilder i Podmans konteinerbildearkiv #
-# med kommandoer på følgende form:			   # 
-# 							   #
+# med kommandoer på følgende form:		       #
+# 						       #
 # podman build <katalog> -t <bildenavn>                #
 ########################################################
 
@@ -34,12 +36,8 @@ podman save  web:latest          | microk8s ctr image import -
 
 
 ##########################################################
-# Lager og redigerer filen allpodd.yaml som brukes til å #
-# iverksette systemet i Kubernetes (microk8s) 	     #
+# Kopierer databasefiler fra kontainerbilder om nødvendig #
 ##########################################################
-
-# Oppretter Podman-podd
-podman  pod create --name allpodd -p 8080:80 -p 8081:81
 
 mkdir -p ./data
 
@@ -48,48 +46,62 @@ if [ ! -f ./data/bidrag.db ] || [ ! -s ./data/bidrag.db ]; then
   podman run --rm localhost/bidrag-db cat /var/www/bidrag.db > ./data/bidrag.db
 fi
 
-if [ ! -f ./data/pseudonym.db ] || [ ! -s ./pseudonym.db ]; then
+if [ ! -f ./data/pseudonym.db ] || [ ! -s ./data/pseudonym.db ]; then
   echo "Copying from pseudonym.db image"
   podman run --rm localhost/pseudonym-db cat /var/www/pseudonym.db > ./data/pseudonym.db
 fi
 
-podman run -dit --pod=allpodd --restart=always --name app          localhost/app
-podman run -dit --pod=allpodd --restart=always --name bidrag-db -v $(pwd)/data/bidrag.db:/var/www/bidrag.db localhost/bidrag-db
-podman run -dit --pod=allpodd --restart=always --name pseudonym-db -v $(pwd)/data/pseudonym.db:/var/www/pseudonym.db localhost/pseudonym-db
-podman run -dit --pod=allpodd --restart=always --name web          localhost/web
 
-# Sletter gammel kuberntes-fil -- om den finnes
-rm -f ./allpodd.yaml
+####################################
+# Aktiverer RBAC i microk8s       #
+####################################
 
-# Lager kubernetes-fil
-podman generate kube allpodd --service -f ./allpodd.yaml
+microk8s enable rbac
+microk8s stop
+microk8s start
+microk8s status --wait-ready
 
-# imagePullPolicy: Never
-# Ref: https://stackoverflow.com/questions/37302776/what-is-the-meaning-of-imagepullbackoff-status-on-a-kubernetes-pod
-sed -i "/image:/a \    imagePullPolicy: Never" allpodd.yaml
-sed -i '/bidrag\.db/s/name: [^ ]*/name: bidrag-db-vol/' allpodd.yaml
-sed -i '/pseudonym\.db/s/name: [^ ]*/name: pseudonym-db-vol/' allpodd.yaml
-
-# Rydder opp (ved å drepe og fjerne podden)
-podman pod kill allpodd
-podman pod rm   allpodd
+# Fjerner permissive ClusterRoleBindings som gir alle tjenestekontoer full tilgang
+echo "Fjerner permissive standard-bindinger..."
+for BINDING in $(microk8s kubectl get clusterrolebindings \
+  -o jsonpath='{range .items[?(@.roleRef.name=="cluster-admin")]}{.metadata.name}{"\n"}{end}'); do
+    SUBJECTS=$(microk8s kubectl get clusterrolebinding "$BINDING" -o jsonpath='{.subjects[*].name}')
+    case "$SUBJECTS" in
+        *system:serviceaccounts*)
+            echo "  Sletter permissiv binding: $BINDING"
+            microk8s kubectl delete clusterrolebinding "$BINDING"
+            ;;
+    esac
+done
 
 
 ########################
 # Starter opp systemet #
 ########################
 
-# Stoppper kjørende service og pod -- om de finnes
-kubectl delete service/allpodd --grace-period=1
-kubectl delete pod/allpodd     --grace-period=1
+# Stopper kjørende servicer og podder -- om de finnes
+kubectl delete service/pseudonym-pod --grace-period=1 2>/dev/null
+kubectl delete pod/pseudonym-pod     --grace-period=1 2>/dev/null
+kubectl delete service/bidrag-pod   --grace-period=1 2>/dev/null
+kubectl delete pod/bidrag-pod       --grace-period=1 2>/dev/null
+kubectl delete -f rbac.yaml         --grace-period=1 2>/dev/null
 
-# Starte podden i en Service i K8S
-kubectl create -f allpodd.yaml
+# Starter poddene i Kubernetes
+kubectl create -f pseudonym-pod.yaml
+kubectl create -f bidrag-pod.yaml
 
-kubectl wait --for=condition=Ready pod/allpodd --timeout=60s
+# Oppretter RBAC (admin-brukere for hver pod)
+kubectl apply -f rbac.yaml
 
-microk8s kubectl port-forward service/allpodd 8080:80 &
-microk8s kubectl port-forward service/allpodd 8081:81 &
+kubectl wait --for=condition=Ready pod/pseudonym-pod --timeout=60s
+kubectl wait --for=condition=Ready pod/bidrag-pod    --timeout=60s
+
+# Genererer kubeconfig-filer for pod-administratorene
+chmod +x lag_kubeconfig.sh
+./lag_kubeconfig.sh
+
+microk8s kubectl port-forward service/bidrag-pod 8080:80 &
+microk8s kubectl port-forward service/bidrag-pod 8081:81 &
 
 ####################################################
 # Skriver ut info for tilgang på lokal vertsmaskin #
@@ -97,9 +109,15 @@ microk8s kubectl port-forward service/allpodd 8081:81 &
 
 echo 
 echo
+echo "To podder kjører:"
+echo "  pseudonym-pod  (pseudonym-db)  admin: pseudonym-admin"
+echo "  bidrag-pod     (app, bidrag-db, web)  admin: bidrag-admin"
+echo
+echo "Kubeconfig-filer for administratorene ligger i ./admin/"
+echo
 echo "Gjør web (80) og app (81) tilgjengelig på localhost:"
 echo 
-echo "microk8s kubectl port-forward service/allpodd 8080:80 &"
-echo "microk8s kubectl port-forward service/allpodd 8081:81 &"
+echo "microk8s kubectl port-forward service/bidrag-pod 8080:80 &"
+echo "microk8s kubectl port-forward service/bidrag-pod 8081:81 &"
 echo 
 echo "For å se i nettleser, gå til http://localhost:8080"

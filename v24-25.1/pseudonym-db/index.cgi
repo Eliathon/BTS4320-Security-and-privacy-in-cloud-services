@@ -18,7 +18,7 @@ CONTENT_LENGTH=$HTTP_CONTENT_LENGTH$CONTENT_LENGTH
 
 KR=$(head -c "$CONTENT_LENGTH" )
 
-# Til loggen (kubctl logs pods/allpodd -c pseudonym-db -f)
+# Til loggen (kubctl logs pods -c pseudonym-db -f)
 echo psudonym-db fikk dette i kroppen: $KR >&2 
 
 E=$( echo "$KR" | xmllint --xpath "/pseudonym/epost/text()"   -  2> /dev/null)

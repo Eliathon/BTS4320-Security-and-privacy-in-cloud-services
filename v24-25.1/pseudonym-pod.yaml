@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: pseudonym-pod
+  name: pseudonym-pod
+spec:
+  ports:
+  - name: "83"
+    port: 83
+    targetPort: 83
+  selector:
+    app: pseudonym-pod
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: pseudonym-pod
+  name: pseudonym-pod
+spec:
+  containers:
+  - env:
+    - name: TERM
+      value: xterm
+    image: localhost/pseudonym-db:latest
+    imagePullPolicy: Never
+    name: pseudonym-db
+    stdin: true
+    tty: true
+    volumeMounts:
+    - mountPath: /var/www/pseudonym.db
+      name: pseudonym-db-vol
+  volumes:
+  - hostPath:
+      path: /home/sindre-ubuntu/v24-25.1/v24-25.1/data/pseudonym.db
+      type: File
+    name: pseudonym-db-vol

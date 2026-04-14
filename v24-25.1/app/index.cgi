@@ -20,10 +20,10 @@ CONTENT_LENGTH=$HTTP_CONTENT_LENGTH$CONTENT_LENGTH
 # Henter data fra HTTP-krpppen 
 KROPP=$(head -c "$CONTENT_LENGTH")
 
-# Til loggen (kubctl logs pods/allpodd -c app -f)
+# Til loggen (kubctl logs pods -c app -f)
 echo app fikk dette i kroppen: $KROPP >&2
 
-# URL-dekoder ein verdi (%HH -> teikn, + -> mellomrom)
+# URL-dekoder en verdi (%HH -> tegn, + -> mellomrom)
 urldecode() {
     printf '%b' "$(echo "$1" | sed 's/+/ /g; s/%\([0-9A-Fa-f][0-9A-Fa-f]\)/\\x\1/g')"
 }
@@ -52,8 +52,8 @@ XML="<pseudonym>             \
        <passord>$P</passord> \
      </pseudonym>"
 
-# URL til pseudonym-databasen
-URL='allpodd:83' 
+# URL til pseudonym-databasen (egen pod, nådd via k8s-tjeneste)
+URL='pseudonym-pod:83'
 
 # Til loggen (kubctl logs pods/app-[...])
 cat <<EOF >&2
@@ -80,8 +80,8 @@ XML="<bidrag>\
 <tekst>$X</tekst>\
 </bidrag>"
 
-# URL til bidrag-databasen
-URL='allpodd:82' 
+# URL til bidrag-databasen (samme pod, nådd via localhost)
+URL='localhost:82' 
 
  
 # Sender forespørsel til databasen, avhengig av forespurt handling

@@ -1,0 +1,91 @@
+# ========================
+# PSEUDONYM-POD ADMIN
+# ========================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pseudonym-admin
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pseudonym-admin-role
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  resourceNames: ["pseudonym-pod"]
+  verbs: ["get", "list", "watch", "delete", "update", "patch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  resourceNames: ["pseudonym-pod"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  resourceNames: ["pseudonym-pod"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resources: ["services"]
+  resourceNames: ["pseudonym-pod"]
+  verbs: ["get", "list", "watch", "delete", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pseudonym-admin-binding
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: pseudonym-admin
+  namespace: default
+roleRef:
+  kind: Role
+  name: pseudonym-admin-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# ========================
+# BIDRAG-POD ADMIN
+# ========================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bidrag-admin
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: bidrag-admin-role
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  resourceNames: ["bidrag-pod"]
+  verbs: ["get", "list", "watch", "delete", "update", "patch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  resourceNames: ["bidrag-pod"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  resourceNames: ["bidrag-pod"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resources: ["services"]
+  resourceNames: ["bidrag-pod"]
+  verbs: ["get", "list", "watch", "delete", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bidrag-admin-binding
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: bidrag-admin
+  namespace: default
+roleRef:
+  kind: Role
+  name: bidrag-admin-role
+  apiGroup: rbac.authorization.k8s.io
