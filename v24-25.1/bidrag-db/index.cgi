@@ -17,14 +17,14 @@ EOF
 CONTENT_LENGTH=$HTTP_CONTENT_LENGTH$CONTENT_LENGTH
 
 if [ "$REQUEST_METHOD" = "GET" ]; then
-    sqlite3 -line $DB "SELECT tittel, tekst FROM  Bidrag"
+    sqlite3 -line $DB "SELECT tittel, tekst, kommentar FROM Bidrag"
     exit
 
 elif [ "$REQUEST_METHOD" = "OPTIONS" ]; then
     exit
 
 else
-    KR=$(head -c "$CONTENT_LENGTH" )
+    KR=$(head -c "$CONTENT_LENGTH")
 
     # Til loggen (kubctl logs pods/allpodd -c bidrag-db -f)
     echo bidrag-db fikk dette i kroppen: $KR >&2
@@ -50,8 +50,11 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 	# Lager en hashverdi av det skapte saltet og det innsendte passordet
 	H=$( mkpasswd -m sha-256 -S $S $P | cut -f4 -d$ )
 
-	# Setter inn ny post i databasen
-        sqlite3 $DB "INSERT INTO Bidrag VALUES ('$N','$S','$H','$K','$O','$T','$X')"
+	# Setter inn ny post, eller overskriver tidligere post for samme pseudonym
+        ERR=$(sqlite3 $DB "INSERT OR REPLACE INTO Bidrag VALUES ('$N','$S','$H','$K','$O','$T','$X')" 2>&1)
+        if [ $? -ne 0 ]; then
+            echo "FEIL ved INSERT: $ERR"
+        fi
 
     fi
     exit

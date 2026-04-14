@@ -1,4 +1,4 @@
 .venv
 .idea
-allpod.yaml
-data/*
+v24-25.1/allpod.yaml
+v24-25.1/data/*
