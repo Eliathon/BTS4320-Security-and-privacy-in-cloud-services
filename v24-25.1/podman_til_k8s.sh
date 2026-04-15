@@ -39,16 +39,16 @@ podman save  web:latest          | microk8s ctr image import -
 # Kopierer databasefiler fra kontainerbilder om nødvendig #
 ##########################################################
 
-mkdir -p ./data
+sudo mkdir -p /var/www
 
-if [ ! -f ./data/bidrag.db ] || [ ! -s ./data/bidrag.db ]; then
-  echo "Copying from bidrag.db image"
-  podman run --rm localhost/bidrag-db cat /var/www/bidrag.db > ./data/bidrag.db
+if [ ! -f /var/www/bidrag.db ] || [ ! -s /var/www/bidrag.db ]; then
+  echo "Kopierer bidrag.db fra kontainerbilde til /var/www/"
+  podman run --rm localhost/bidrag-db cat /var/www/bidrag.db | sudo tee /var/www/bidrag.db > /dev/null
 fi
 
-if [ ! -f ./data/pseudonym.db ] || [ ! -s ./data/pseudonym.db ]; then
-  echo "Copying from pseudonym.db image"
-  podman run --rm localhost/pseudonym-db cat /var/www/pseudonym.db > ./data/pseudonym.db
+if [ ! -f /var/www/pseudonym.db ] || [ ! -s /var/www/pseudonym.db ]; then
+  echo "Kopierer pseudonym.db fra kontainerbilde til /var/www/"
+  podman run --rm localhost/pseudonym-db cat /var/www/pseudonym.db | sudo tee /var/www/pseudonym.db > /dev/null
 fi
 
 
