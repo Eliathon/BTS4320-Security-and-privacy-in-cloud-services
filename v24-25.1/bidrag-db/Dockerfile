@@ -7,7 +7,6 @@ RUN echo "CREATE TABLE Bidrag (              \
   salt             VARCHAR(11),              \	
   passordhash      VARCHAR(44),              \
   kommentar        VARCHAR(1000),            \
-  offentlig_nokkel VARCHAR(200),             \
   tittel           VARCHAR(100),             \
   tekst            VARCHAR(1000))" | sqlite3 var/www/bidrag.db
 

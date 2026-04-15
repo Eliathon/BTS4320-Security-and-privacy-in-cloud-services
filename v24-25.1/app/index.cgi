@@ -37,7 +37,6 @@ for I in $(echo $KROPP|tr '&' ' '); do
     if [ "$N" = "epost"             ]; then  E="$V"; fi  
     if [ "$N" = "passord"           ]; then  P="$V"; fi  
     if [ "$N" = "kommentar"         ]; then  K="$V"; fi
-    if [ "$N" = "offentlig_nokkel"  ]; then  O="$V"; fi
     if [ "$N" = "tittel"            ]; then  T="$V"; fi
     if [ "$N" = "tekst"             ]; then  X="$V"; fi
     if [ "$N" = "handling"          ]; then  H="$V"; fi  
@@ -75,7 +74,6 @@ XML="<bidrag>\
 <navn>$N</navn>\
 <passord>$P</passord>\
 <kommentar>$K</kommentar>\
-<offentlig_nokkel>$O</offentlig_nokkel>\
 <tittel>$T</tittel>\
 <tekst>$X</tekst>\
 </bidrag>"
