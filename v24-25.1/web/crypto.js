@@ -66,21 +66,91 @@ async function decryptKommentarLinjer(rawText, passord, epost) {
     return decryptedLines.join("\n");
 }
 
+function isValidEmail(epost) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(epost);
+}
+
+function validateInput({ handling, epost, passord, tittel, kommentar, tekst }) {
+    const gyldigeHandlinger = ["Ny", "Endre", "Slett", "Liste"];
+
+    if (!gyldigeHandlinger.includes(handling)) {
+        return "Ugyldig handling.";
+    }
+
+    if (!epost.trim()) {
+        return "E-post må fylles ut.";
+    }
+
+    if (!isValidEmail(epost.trim())) {
+        return "E-postadressen er ugyldig.";
+    }
+
+    if (!passord.trim()) {
+        return "Passord må fylles ut.";
+    }
+
+    if (passord.length < 3) {
+        return "Passord må være minst 3 tegn.";
+    }
+
+    if (tittel.length > 100) {
+        return "Tittel kan ikke være lengre enn 100 tegn.";
+    }
+
+    if (kommentar.length > 500) {
+        return "Kommentar kan ikke være lengre enn 500 tegn.";
+    }
+
+    if (tekst.length > 5000) {
+        return "Tekst kan ikke være lengre enn 5000 tegn.";
+    }
+
+    if ((handling === "Ny" || handling === "Endre")) {
+        if (!tittel.trim()) {
+            return "Tittel må fylles ut.";
+        }
+
+        if (!tekst.trim()) {
+            return "Tekst må fylles ut.";
+        }
+    }
+
+    return null;
+}
+
 document.getElementById("bidragForm").addEventListener("submit", async function (event) {
     const handling = event.submitter?.value || "";
     const form = event.target;
-    const kommentar = document.getElementById("kommentar");
+    const kommentarEl = document.getElementById("kommentar");
     const passord = document.getElementById("passord").value;
     const epost = document.getElementById("epost").value;
+    const tittel = document.getElementById("tittel").value;
+    const tekst = document.getElementById("tekst").value;
+    const kommentar = kommentarEl.value;
 
     if (!handling) return;
 
     event.preventDefault();
+
+    const feil = validateInput({
+        handling,
+        epost,
+        passord,
+        tittel,
+        kommentar,
+        tekst
+    });
+
+    if (feil) {
+        setListResult(feil);
+        return;
+    }
+
     const formData = new URLSearchParams(new FormData(form));
     formData.set("handling", handling);
 
-    if ((handling === "Ny" || handling === "Endre") && kommentar.value.trim()) {
-        formData.set("kommentar", await encrypt(kommentar.value, passord, epost));
+    if ((handling === "Ny" || handling === "Endre") && kommentar.trim()) {
+        formData.set("kommentar", await encrypt(kommentar, passord, epost));
     }
 
     const response = await fetch(form.action, {
