@@ -56,6 +56,6 @@ spec:
     tty: true
   volumes:
   - hostPath:
-      path: /var/www/bidrag.db
+      path: /home/patr/1234/BTS4320-Security-and-privacy-in-cloud-services/v24-25.1/data/bidrag.db
       type: File
     name: bidrag-db-vol

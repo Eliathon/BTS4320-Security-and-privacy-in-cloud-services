@@ -8,7 +8,9 @@ RUN echo "CREATE TABLE Bidrag (              \
   passordhash      VARCHAR(44),              \
   kommentar        VARCHAR(1000),            \
   tittel           VARCHAR(100),             \
-  tekst            VARCHAR(1000))" | sqlite3 var/www/bidrag.db
+  tekst            VARCHAR(1000),            \
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP \
+  )" | sqlite3 var/www/bidrag.db
 
 RUN echo "INSERT INTO Bidrag (pseudonym, salt, passordhash) VALUES             \
    ('osiedahs', '1712167670', 'Aw16YyLRWTS0BOoOb7DpvBMeYb444g.kl1a542GYpJA' ), \

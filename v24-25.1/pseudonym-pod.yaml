@@ -34,6 +34,6 @@ spec:
       name: pseudonym-db-vol
   volumes:
   - hostPath:
-      path: /var/www/pseudonym.db
+      path: /home/patr/1234/BTS4320-Security-and-privacy-in-cloud-services/v24-25.1/data/pseudonym.db
       type: File
     name: pseudonym-db-vol
