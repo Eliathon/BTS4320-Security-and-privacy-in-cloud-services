@@ -57,7 +57,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 	H=$( mkpasswd -m sha-256 -S $S $P | cut -f4 -d$ )
 
 	# Setter inn ny post, eller overskriver tidligere post for samme pseudonym
-        ERR=$(sqlite3 $DB "INSERT OR REPLACE INTO Bidrag VALUES ('$N','$S','$H','$K','$T','$X')" 2>&1)
+        ERR=$(sqlite3 $DB "INSERT OR REPLACE INTO Bidrag (pseudonym, salt, passordhash, kommentar, tittel, tekst) VALUES ('$N','$S','$H','$K','$T','$X')" 2>&1)
         if [ $? -ne 0 ]; then
             echo "FEIL ved INSERT: $ERR"
         fi
