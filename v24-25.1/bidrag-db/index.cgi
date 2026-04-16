@@ -24,7 +24,7 @@ EOF
 CONTENT_LENGTH=$HTTP_CONTENT_LENGTH$CONTENT_LENGTH
 
 if [ "$REQUEST_METHOD" = "GET" ]; then
-    sqlite3 -line $DB "SELECT tittel, tekst, kommentar FROM Bidrag"
+    sqlite3 -line $DB "SELECT tittel, tekst, kommentar, datetime(created_at, 'localtime') as created_at FROM Bidrag"
     exit
 
 elif [ "$REQUEST_METHOD" = "OPTIONS" ]; then

@@ -12,6 +12,16 @@ RUN echo "CREATE TABLE Bidrag (              \
   created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP \
   )" | sqlite3 var/www/bidrag.db
 
+RUN echo "CREATE TRIGGER set_created_at \
+  AFTER INSERT ON Bidrag \
+  FOR EACH ROW \
+  WHEN NEW.created_at IS NULL \
+BEGIN \
+  UPDATE Bidrag \
+  SET created_at = CURRENT_TIMESTAMP \
+  WHERE pseudonym = NEW.pseudonym; \
+END;" | sqlite3 var/www/bidrag.db
+
 RUN echo "INSERT INTO Bidrag (pseudonym, salt, passordhash) VALUES             \
    ('osiedahs', '1712167670', 'Aw16YyLRWTS0BOoOb7DpvBMeYb444g.kl1a542GYpJA' ), \
    ('uozaixav', '1712167671', 'q37QpOdM2jSDeXOVAyiCSzMgy08dI7pLQ1aBElJps48' ), \
