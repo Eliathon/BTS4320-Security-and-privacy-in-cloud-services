@@ -24,6 +24,11 @@ spec:
   - env:
     - name: TERM
       value: xterm
+    - name: API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: api-key-secret
+          key: service-key
     image: localhost/pseudonym-db:latest
     imagePullPolicy: Never
     name: pseudonym-db

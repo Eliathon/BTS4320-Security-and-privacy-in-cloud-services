@@ -1,7 +1,7 @@
 #!/bin/sh
 
 DB=../pseudonym.db
-API_KEY="secret-bidrag-key"
+API_KEY="$API_KEY"
 
 echo 'Access-Control-Allow-Origin: http://localhost:8080'
 echo 'Access-Control-Allow-Credentials: true'

@@ -85,6 +85,15 @@ kubectl delete pod/pseudonym-pod     --grace-period=1 2>/dev/null
 kubectl delete service/bidrag-pod   --grace-period=1 2>/dev/null
 kubectl delete pod/bidrag-pod       --grace-period=1 2>/dev/null
 kubectl delete -f rbac.yaml         --grace-period=1 2>/dev/null
+kubectl delete -f network-policies.yaml --grace-period=1 2>/dev/null
+kubectl delete secret api-key-secret --grace-period=1 2>/dev/null
+
+# Genererer en tilfeldig API-nøkkel
+API_KEY=$(openssl rand -hex 32)
+echo "Generert API-nøkkel: $API_KEY"
+
+# Oppretter Kubernetes Secret med API-nøkkelen
+kubectl create secret generic api-key-secret --from-literal=service-key="$API_KEY"
 
 # Starter poddene i Kubernetes
 kubectl create -f pseudonym-pod.yaml
@@ -92,6 +101,9 @@ kubectl create -f bidrag-pod.yaml
 
 # Oppretter RBAC (admin-brukere for hver pod)
 kubectl apply -f rbac.yaml
+
+# Bruker NetworkPolicies for å sikre at bare tillatt trafikk er åpnet
+kubectl apply -f network-policies.yaml
 
 kubectl wait --for=condition=Ready pod/pseudonym-pod --timeout=60s
 kubectl wait --for=condition=Ready pod/bidrag-pod    --timeout=60s

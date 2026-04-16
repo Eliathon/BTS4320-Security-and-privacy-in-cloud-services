@@ -1,7 +1,7 @@
 #!/bin/sh
 
 DB=../bidrag.db
-API_KEY="secret-bidrag-key"
+API_KEY="$API_KEY"
 
 # Validerer API-nøkkel
 if [ "$HTTP_X_API_KEY" != "$API_KEY" ]; then

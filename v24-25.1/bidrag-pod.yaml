@@ -27,6 +27,11 @@ spec:
   - env:
     - name: TERM
       value: xterm
+    - name: API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: api-key-secret
+          key: service-key
     image: localhost/app:latest
     imagePullPolicy: Never
     name: app
@@ -38,6 +43,11 @@ spec:
   - env:
     - name: TERM
       value: xterm
+    - name: API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: api-key-secret
+          key: service-key
     image: localhost/bidrag-db:latest
     imagePullPolicy: Never
     name: bidrag-db
