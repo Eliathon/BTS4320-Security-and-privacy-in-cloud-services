@@ -1,0 +1,87 @@
+
+# DEFAULT DENY ALL INGRESS
+# Blokkerer trafikk til alle pods som default (default deny)
+# fungerer for å sikre at ingen uønsket trafikk kommer inn i klyngen 
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: default
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+---
+
+# ALLOW EXTERNAL TRAFFIC TO BIDRAG-POD (WEB)
+# Tillater traffik til bidrag-pod på port 80 og 81 fra alle kilder
+# Nødvendig for at web-applikasjonen skal være tilgjengelig for brukere utenfor klyngen
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-bidrag-web
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: bidrag-pod
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 81
+---
+
+# ALLOW BIDRAG-POD TO CALL PSEUDONYM-POD
+# Tillater at bidrag-pod kan kommunisere med pseudonym-pod på port 83
+# Nødvendig for at bidrag-pod skal kunne hente pseudonymdata fra pseudonym-pod.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-bidrag-to-pseudonym
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: pseudonym-pod
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: bidrag-pod
+    ports:
+    - protocol: TCP
+      port: 83
+---
+
+# ALLOW PSEUDONYM-POD TO CALL BIDRAG-POD (IF NEEDED)
+# Tillater at pseudonym-pod kan kommunisere med bidrag-pod på port 80 og 81
+# Nødvendig hvis pseudonym-pod trenger å sende data tilbake til bidrag-pod eller initiere kommunikasjon.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-pseudonym-to-bidrag
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: bidrag-pod
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: pseudonym-pod
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 81

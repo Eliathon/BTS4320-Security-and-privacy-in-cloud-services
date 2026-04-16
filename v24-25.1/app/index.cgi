@@ -64,7 +64,7 @@ EOF
 
 
 # Henter pseudonym
-N=$(curl -s -d "$XML" $URL)
+N=$(curl -s -H "X-API-Key: secret-bidrag-key" -d "$XML" $URL)
 
 
 ## 1. KONTAKTER BIDRAG-DB ##
@@ -83,10 +83,10 @@ URL='localhost:82'
 
  
 # Sender forespørsel til databasen, avhengig av forespurt handling
-if [ "$H" = "Slett" ]; then curl -s -X DELETE -d "$XML" $URL; fi     
-if [ "$H" = "Endre" ]; then curl -s -X PUT    -d "$XML" $URL; fi
-if [ "$H" = "Ny"    ]; then curl -s -X POST   -d "$XML" $URL; fi
-if [ "$H" = "Liste" ]; then curl -s -X GET              $URL; fi
+if [ "$H" = "Slett" ]; then curl -s -H "X-API-Key: secret-bidrag-key" -X DELETE -d "$XML" $URL; fi
+if [ "$H" = "Endre" ]; then curl -s -H "X-API-Key: secret-bidrag-key" -X PUT    -d "$XML" $URL; fi
+if [ "$H" = "Ny"    ]; then curl -s -H "X-API-Key: secret-bidrag-key" -X POST   -d "$XML" $URL; fi
+if [ "$H" = "Liste" ]; then curl -s -H "X-API-Key: secret-bidrag-key" -X GET              $URL; fi
 
 
 # Til loggen (kubctl logs pods/app-[...])

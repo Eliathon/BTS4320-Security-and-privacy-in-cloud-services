@@ -1,6 +1,7 @@
 #!/bin/sh
 
 DB=../pseudonym.db
+API_KEY="secret-bidrag-key"
 
 echo 'Access-Control-Allow-Origin: http://localhost:8080'
 echo 'Access-Control-Allow-Credentials: true'
@@ -9,6 +10,12 @@ echo 'Access-Control-Allow-Headers: Content-Type'
 
 echo "Content-Type:text/plain;charset=utf-8"
 echo
+
+# Validerer API-nøkkel
+if [ "$HTTP_X_API_KEY" != "$API_KEY" ]; then
+    echo "Unauthorized: Invalid API Key" >&2
+    exit 1
+fi
 
 # Avslutter om HTTP-forespørsel ikke er en POST
 if [ "$REQUEST_METHOD" != "POST" ]; then exit; fi

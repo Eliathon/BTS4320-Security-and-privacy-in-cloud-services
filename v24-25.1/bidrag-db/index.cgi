@@ -1,6 +1,13 @@
 #!/bin/sh
 
 DB=../bidrag.db
+API_KEY="secret-bidrag-key"
+
+# Validerer API-nøkkel
+if [ "$HTTP_X_API_KEY" != "$API_KEY" ]; then
+    echo "Unauthorized: Invalid API Key" >&2
+    exit 1
+fi
 
 # Skriver slutten av HTTP-hodet og en tom linje
 cat <<EOF
