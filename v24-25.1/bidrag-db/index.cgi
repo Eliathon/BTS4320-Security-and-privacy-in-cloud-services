@@ -24,7 +24,9 @@ EOF
 CONTENT_LENGTH=$HTTP_CONTENT_LENGTH$CONTENT_LENGTH
 
 if [ "$REQUEST_METHOD" = "GET" ]; then
-    sqlite3 -line $DB "SELECT tittel, tekst, kommentar, datetime(created_at, 'localtime') as created_at FROM Bidrag"
+    sqlite3 -line $DB "SELECT tittel, tekst, kommentar, 
+    datetime(created_at, 'localtime') as created_at,
+    datetime(updated_at, 'localtime') as updated_at FROM Bidrag"
     exit
 
 elif [ "$REQUEST_METHOD" = "OPTIONS" ]; then
@@ -89,7 +91,8 @@ elif [ "$REQUEST_METHOD" = "PUT" ]; then
     sqlite3 $DB                \
        "UPDATE Bidrag SET      \
     	kommentar='$K',        \
-	tittel='$T',           \
-        tekst='$X'             \
+	    tittel='$T',           \
+        tekst='$X',             \
+        updated_at=CURRENT_TIMESTAMP \
         WHERE pseudonym='$N'"
 fi

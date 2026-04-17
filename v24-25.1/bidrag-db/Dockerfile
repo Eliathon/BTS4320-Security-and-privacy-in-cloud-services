@@ -9,7 +9,8 @@ RUN echo "CREATE TABLE Bidrag (              \
   kommentar        VARCHAR(1000),            \
   tittel           VARCHAR(100),             \
   tekst            VARCHAR(1000),            \
-  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP \
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP, \
+  updated_at       TIMESTAMP \
   )" | sqlite3 var/www/bidrag.db
 
 RUN echo "CREATE TRIGGER set_created_at \
